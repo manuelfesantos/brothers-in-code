@@ -12,6 +12,7 @@
     "@types/node": "20.11.24",
     "@types/react": "18.2.62",
     "@types/react-dom": "18.2.19",
+    "bcrypt": "^5.1.1",
     "eslint": "8.57.0",
     "eslint-config-next": "14.1.1",
     "mongodb": "^6.4.0",
