@@ -9,7 +9,7 @@ export async function run() {
     await client.connect();
     const db = client.db("BrothersInCode");
     const col = db.collection("Products");
-    console.log(col.collectionName);
+    console.log("Connected to Database on Collection: " + col.collectionName);
   } catch (err: any) {
     console.log(err.stack);
   } finally {
