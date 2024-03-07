@@ -12,6 +12,7 @@ interface IProduct extends Document {
   price: number;
   description: string;
   quantity: number;
+  category: string;
 }
 
 /**
@@ -22,7 +23,7 @@ interface IProduct extends Document {
  * @param {string} description - A brief description of the product.
  * @param {number} quantity - The quantity of the product in stock.
  */
-const productSchema: Schema = new Schema({
+const productSchema: Schema = new Schema<IProduct>({
   name: {
     type: String,
     required: true
