@@ -1,7 +1,47 @@
+import { Box, Button, Container, Typography } from "@mui/material";
+import Head from "next/head";
+import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+
 export default function Home() {
+  const router = useRouter();
+
   return (
     <>
-      <h1>Home</h1>
+      <Head>
+        <meta name="viewport" content="initial-scale=1, width=device-width" />
+        <title>Home</title>
+      </Head>
+      <Container maxWidth="lg">
+        <Box
+          sx={{
+            my: 4,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ mb: 2, textAlign: "center" }}
+          >
+            Welcome to the Next Online Shop!
+          </Typography>
+          <Link href="/products" color="secondary">
+            Go to the products page
+          </Link>
+          <Button
+            onClick={() => router.push("/login")}
+            variant="contained"
+            sx={{ mt: 2 }}
+          >
+            Login
+          </Button>
+        </Box>
+      </Container>
     </>
   );
 }
