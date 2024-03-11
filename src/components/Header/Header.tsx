@@ -5,6 +5,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import {
   AppBar,
   Avatar,
+  Badge,
   Box,
   Button,
   Container,
@@ -17,7 +18,8 @@ import {
   Typography,
   useScrollTrigger,
 } from "@mui/material";
-import { useState, MouseEvent } from "react";
+import { useState, MouseEvent, useEffect, useContext } from "react";
+import { CartContext, cartContext } from "@/context/cart-context";
 
 const HideOnScroll = ({ children }: any) => {
   const trigger = useScrollTrigger();
@@ -31,6 +33,7 @@ const HideOnScroll = ({ children }: any) => {
 export default function Header() {
   const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const { cart, setCart } = useContext(cartContext) as CartContext;
 
   const pages = [
     ["Home", "/"],
@@ -60,6 +63,11 @@ export default function Header() {
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
+
+  useEffect(() => {
+    const storageCart = JSON.parse(localStorage.getItem("cart") || "[]");
+    setCart(storageCart);
+  }, [setCart]);
 
   return (
     <>
@@ -152,9 +160,21 @@ export default function Header() {
                 ))}
               </Box>
               <Box sx={{ flexGrow: 0 }}>
-                <Link href={"/cart"}>
-                  <IconButton color={"inherit"} size={"large"}>
-                    <ShoppingCartIcon />
+                <Link href={"/cart"} style={{ marginRight: 10 }}>
+                  <IconButton
+                    color={"inherit"}
+                    size={"large"}
+                    sx={{ position: "relative" }}
+                  >
+                    <Badge
+                      badgeContent={cart.reduce(
+                        (count, item) => count + item.quantity,
+                        0,
+                      )}
+                      color="error"
+                    >
+                      <ShoppingCartIcon />
+                    </Badge>
                   </IconButton>
                 </Link>
                 <Tooltip title={"Open settings"}>
