@@ -1,60 +1,78 @@
 import Head from "next/head";
 import { CartContext, cartContext, CartItemType } from "@/context/cart-context";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import CartItem from "@/components/CartItem/CartItem";
 import { Box, Button, Container, Typography } from "@mui/material";
 import Link from "next/link";
+import SimpleSnackBar from "@/components/SimpleSnackBar/SimpleSnackBar";
 
 export default function Cart() {
   const { cart, setCart } = useContext(cartContext) as CartContext;
+  const [recentlyRemoved, setRecentlyRemoved] = useState<CartItemType | null>(
+    null,
+  );
+  const [showingSnackBar, setShowingSnackbar] = useState<boolean>(false);
 
   const handleRemoveFromCart = (item: CartItemType) => {
-    const cartItem = cart.find(
-      (cartItem) => item.product._id === cartItem.product._id,
-    );
+    const cartItem = getCartItem(item);
     if (!cartItem) return;
     if (cartItem.quantity > 1) {
-      const newCart = cart.map((cartItem) => {
-        if (item.product._id === cartItem.product._id) {
-          return {
-            ...cartItem,
-            quantity: cartItem.quantity - 1,
-          };
-        }
-        return cartItem;
-      });
-      setCart(newCart);
-      localStorage.setItem("cart", JSON.stringify(newCart));
+      const newCart = changeItemQuantity(cartItem, -1);
+      saveCart(newCart);
       return;
     }
+    setRecentlyRemoved(cartItem);
+    openSnackBar();
     const newCart = cart.filter(
       (cartItem) => item.product._id !== cartItem.product._id,
     );
+    saveCart(newCart);
+  };
+
+  const handleAddToCart = (item: CartItemType) => {
+    const cartItem = getCartItem(item);
+    if (!cartItem) {
+      const newCart = [...cart, { product: item.product, quantity: 1 }];
+      saveCart(newCart);
+      return;
+    }
+    const newCart = changeItemQuantity(cartItem, 1);
+    saveCart(newCart);
+  };
+
+  const changeItemQuantity = (item: CartItemType, quantity: number) => {
+    return cart.map((cartItem) => {
+      if (item.product._id === cartItem.product._id) {
+        return {
+          ...cartItem,
+          quantity: cartItem.quantity + quantity,
+        };
+      }
+      return item;
+    });
+  };
+
+  const getCartItem = (item: CartItemType) => {
+    return cart.find((cartItem) => item.product._id === cartItem.product._id);
+  };
+
+  const saveCart = (newCart: CartItemType[]) => {
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
-  const handleAddToCart = (item: CartItemType) => {
-    const cartItem = cart.find(
-      (cartItem) => item.product._id === cartItem.product._id,
-    );
-    if (!cartItem) {
-      const newCart = [...cart, { product: item.product, quantity: 1 }];
-      setCart(newCart);
-      localStorage.setItem("cart", JSON.stringify(newCart));
-      return;
-    }
-    const newCart = cart.map((cartItem) => {
-      if (item.product._id === cartItem.product._id) {
-        return {
-          ...cartItem,
-          quantity: cartItem.quantity + 1,
-        };
-      }
-      return cartItem;
-    });
-    setCart(newCart);
-    localStorage.setItem("cart", JSON.stringify(newCart));
+  const openSnackBar = () => {
+    setShowingSnackbar(true);
+  };
+
+  const closeSnackBar = () => {
+    setShowingSnackbar(false);
+  };
+
+  const undo = () => {
+    if (!recentlyRemoved) return;
+    const newCart = [...cart, recentlyRemoved];
+    saveCart(newCart);
   };
 
   useEffect(() => {
@@ -76,11 +94,11 @@ export default function Cart() {
           alignItems: "center",
         }}
       >
-        <Typography variant="h2" fontWeight={500} my={4}>
-          Cart
-        </Typography>
         {cart.length ? (
           <>
+            <Typography variant="h2" fontWeight={500} my={4}>
+              Cart
+            </Typography>
             <Box display={"flex"} flexDirection={"column"} gap={2}>
               {[...new Set(cart)].map((item) => (
                 <CartItem
@@ -113,6 +131,12 @@ export default function Cart() {
           </>
         )}
       </Container>
+      <SimpleSnackBar
+        open={showingSnackBar}
+        close={closeSnackBar}
+        message={"Item removed"}
+        undo={undo}
+      />
     </>
   );
 }
