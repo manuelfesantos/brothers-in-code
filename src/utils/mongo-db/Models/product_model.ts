@@ -1,32 +1,30 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-/**
- * Model for a Product in the MongoDB database.
- *
- * The Product model is a schema for a document that contains information about a product,
- * such as its name, price, description, and quantity in stock.
- *
- */
-interface IProduct extends Document {
+
+export interface IProduct extends Document {
   name: string;
   price: number;
   description: string;
   quantity: number;
   category: string;
+  image_urls: string[];
 }
 
 /**
- * Mongoose schema for a Product document.
+ * Schema for the Products collection in the MongoDB.
  *
- * @param {string} name - The name of the product.
- * @param {number} price - The price of the product.
- * @param {string} description - A brief description of the product.
- * @param {number} quantity - The quantity of the product in stock.
+ * @param {string} name - The name of the product
+ * @param {number} price - The price of the product
+ * @param {string} description - A brief description of the product
+ * @param {number} quantity - The quantity of the product
+ * @param {string} category - The category of the product
+ * @param {string[]} image_urls - The URLs of the images for the product
  */
 const productSchema: Schema = new Schema<IProduct>({
   name: {
     type: String,
-    required: true
+    required: true,
+    unique: true,
   },
   price: {
     type: Number,
@@ -43,6 +41,10 @@ const productSchema: Schema = new Schema<IProduct>({
     type: String,
     enum: ['Electronics', 'Clothing', 'Books']
   },
+  image_urls: [{
+    type: String,
+  }],
+
 });
 
 /**
@@ -62,15 +64,13 @@ productSchema.statics.itemExists = async function (productName: string): Promise
 };
 
 /**
- * Retrieves the quantity of a product with the given name.
+ * Get the quantity of the product.
  *
- * @param {string} productName - The name of the product to retrieve the quantity for.
- * @return {Promise<number | null>} The quantity of the product, or null if an error occurs.
+ * @return {number} The quantity of the product, or null if an error occurs
  */
-productSchema.statics.getQuantity = async function (productName: string): Promise<number | null> {
+productSchema.methods.getQuantity = async function (): Promise<number | null> {
   try {
-    const product = await this.findOne({ name: productName });
-    return product?.quantity ?? null;
+    return this.quantity ?? null;
   } catch (error) {
     console.error('Error in getQuantity:', error);
     return null;
@@ -85,20 +85,15 @@ productSchema.statics.getQuantity = async function (productName: string): Promis
    * @param {number} quantityToAdd - the quantity to add to the product
    * @return {Promise<boolean>} true if the items were successfully added, false if the product does not exist or an error occurred
    */
-productSchema.statics.addItems = async function (productName: string, quantityToAdd: number): Promise<boolean> {
+productSchema.methods.addItems = async function (this: IProduct, quantityToAdd: number): Promise<boolean> {
   try {
     if (quantityToAdd <= 0) {
       console.error('Quantity to add must be positive');
       return false;
     }
-    const product = await this.findOne({ name: productName });
-    if (product) {
-      product.quantity += quantityToAdd;
-      await product.save();
-      return true;
-    } else {
-      return false; // Product not found
-    }
+    this.quantity += quantityToAdd;
+    await this.save();
+    return true;
   } catch (error) {
     console.error('Error in addItems:', error);
     return false;
@@ -113,23 +108,18 @@ productSchema.statics.addItems = async function (productName: string, quantityTo
    * @param {number} quantityToRemove - the quantity to remove from the product
    * @return {Promise<boolean>} true if the items were successfully removed, false if the product does not exist or an error occurred
    */
-productSchema.statics.removeItems = async function (productName: string, quantityToRemove: number): Promise<boolean> {
+productSchema.methods.removeItems = async function (quantityToRemove: number): Promise<boolean> {
   try {
     if (quantityToRemove <= 0) {
       console.error('Quantity to remove must be positive');
       return false;
     }
-    const product = await this.findOne({ name: productName });
-    if (product) {
-      if (product.quantity < quantityToRemove) {
-        return false; // Not enough items in stock
-      } else {
-        product.quantity -= quantityToRemove;
-        await product.save();
-        return true;
-      }
+    if (this.quantity < quantityToRemove) {
+      return false; // Not enough items in stock
     } else {
-      return false; // Product not found
+      this.quantity -= quantityToRemove;
+      await this.save();
+      return true;
     }
   } catch (error) {
     console.error('Error in removeItems:', error);
@@ -165,23 +155,26 @@ productSchema.statics.deleteItem = async function (productName: string): Promise
    * @return {Promise<IProduct | null>} The created product, or null if an error occurred.
    */
 productSchema.statics.createItem = async function (
-  name: string,
-  price: number,
-  quantity: number,
-  description: string,
-  category: string
-): Promise<IProduct | null> {
+  { name, price, quantity, description, category }: Omit<IProduct, '_id'>
+): Promise<IProduct | object> {
   try {
-    return await this.create({
-      name,
-      price,
-      quantity,
-      description,
-      category,
-    });
-  } catch (error) {
+    const itemExists = await this.itemExists(name);
+    if (itemExists) {
+      const error = new Error('Item already exists');
+      (error as any).httpCode = 409;
+      throw error;
+    } else {
+      return await this.create({
+        name,
+        price,
+        quantity,
+        description,
+        category,
+      });
+    }
+  } catch (error: any) {
     console.error('Error in createItem:', error);
-    return null;
+    return { error: [error.httpCode, error.message] };
   }
 };
 
@@ -193,14 +186,15 @@ productSchema.statics.createItem = async function (
    * @param {number} newPrice - The new price of the product.
    * @return {Promise<boolean>} True if the price was changed successfully, false if an error occurred.
    */
-productSchema.statics.changePrice = async function (productName: string, newPrice: number): Promise<boolean> {
+productSchema.methods.changePrice = async function (newPrice: number): Promise<boolean> {
   if (newPrice <= 0) {
     console.error('New price must be positive');
     return false;
   }
   try {
-    const result = await this.updateOne({ name: productName }, { price: newPrice });
-    return result.modifiedCount > 0;
+    this.price = newPrice;
+    const result = await this.save();
+    return !!result;
   } catch (error) {
     console.error('Error in changePrice:', error);
     return false;
@@ -215,15 +209,17 @@ productSchema.statics.changePrice = async function (productName: string, newPric
  * @param {string} newDescription - The new description of the product.
  * @return {Promise<boolean>} True if the description was changed successfully, false if an error occurred.
  */
-productSchema.statics.changeDescription = async function (productName: string, newDescription: string): Promise<boolean> {
+productSchema.methods.changeDescription = async function (newDescription: string): Promise<boolean> {
   try {
-    const result = await this.updateOne({ name: productName }, { description: newDescription });
-    return result.modifiedCount > 0;
+    this.description = newDescription;
+    const result = await this.save();
+    return !!result;
   } catch (error) {
     console.error('Error in changeDescription:', error);
     return false;
   }
 };
+
 
 
 /**
@@ -233,15 +229,45 @@ productSchema.statics.changeDescription = async function (productName: string, n
  * @param {string} newCategory - The new category of the product.
  * @return {Promise<boolean>} True if the category was changed successfully, false if an error occurred.
  */
-productSchema.statics.changeCategory = async function (productName: string, newCategory: string): Promise<boolean> {
+productSchema.methods.changeCategory = async function (newCategory: string): Promise<boolean> {
   try {
-    const result = await this.updateOne({ name: productName }, { category: newCategory });
-    return result.modifiedCount > 0;
+    this.category = newCategory;
+    const result = await this.save();
+    return !!result;
   } catch (error) {
     console.error('Error in changeCategory:', error);
     return false;
   }
 };
+
+
+/**
+ * Find a product by its name.
+ *
+ * @param {string} productName - The name of the product to find.
+ * @return {Promise<IProduct | null>} The found product, or null if the product was not found.
+ */
+productSchema.statics.findByName = async function (productName: string): Promise<IProduct | null> {
+  return await this.findOne({ name: productName });
+};
+
+
+
+/**
+ * Find a product by its id.
+ *
+ * @param {string} productId - The id of the product to find.
+ * @return {Promise<IProduct | null>} The found product, or null if the product was not found.
+ */
+productSchema.statics.findItembyId = async function (productId: string): Promise<IProduct | null> {
+  if (typeof productId !== 'string') {
+    throw new Error(`productId must be a string, got ${typeof productId}`);
+  }
+  return await this.findById({ _id: productId });
+};
+
+
+
 
 
 export default mongoose.model<IProduct>('Product', productSchema);
