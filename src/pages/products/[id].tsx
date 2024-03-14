@@ -6,13 +6,19 @@ import { Box, Button, Container, Typography } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import { CartContext, cartContext } from "@/context/cart-context";
+import { CartContext, cartContext, CartItemType } from "@/context/cart-context";
 import { getLargeImage } from "@/utils/r2/r2-endpoints";
+import Link from "next/link";
+import SimpleSnackBar from "@/components/SimpleSnackBar/SimpleSnackBar";
+import { transformProductName } from "@/utils/value-handling/text-handling";
 
 export default function Product({ product }: { product: Product }) {
   const router = useRouter();
   const [currentImage, setCurrentImage] = useState<number>(1);
   const { cart, setCart } = useContext(cartContext) as CartContext;
+  const [showingSnackBar, setShowingSnackbar] = useState<boolean>(false);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [recentlyAdded, setRecentlyAdded] = useState<number>(0);
   const handleNext = () => {
     if (currentImage < 4) {
       setCurrentImage(currentImage + 1);
@@ -29,24 +35,69 @@ export default function Product({ product }: { product: Product }) {
   };
 
   const handleAddToCart = () => {
-    const cartItem = cart.find((item) => item.product._id === product._id);
+    openSnackBar();
+    setRecentlyAdded(quantity);
+    const cartItem = getCartItem();
+    console.log("Showing Snack Bar: ", showingSnackBar);
     if (cartItem) {
-      const newCart = cart.map((item) => {
-        if (item.product._id === product._id) {
-          return {
-            ...item,
-            quantity: item.quantity + 1,
-          };
-        }
-        return item;
-      });
-      setCart(newCart);
-      localStorage.setItem("cart", JSON.stringify(newCart));
+      const newCart = changeItemQuantity(quantity);
+      saveCart(newCart);
       return;
     }
-    const newCart = [...cart, { product, quantity: 1 }];
+    const newCart = [...cart, { product, quantity: quantity }];
+    saveCart(newCart);
+  };
+
+  const getCartItem = () => {
+    return cart.find((item) => item.product._id === product._id);
+  };
+
+  const changeItemQuantity = (quantity: number) => {
+    return cart.map((item) => {
+      if (item.product._id === product._id) {
+        return {
+          ...item,
+          quantity: item.quantity + quantity,
+        };
+      }
+      return item;
+    });
+  };
+
+  const saveCart = (newCart: CartItemType[]) => {
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+  };
+
+  const openSnackBar = () => {
+    setShowingSnackbar((prevState) => true);
+  };
+
+  const closeSnackBar = () => {
+    setShowingSnackbar(false);
+  };
+
+  const increaseQuantity = () => {
+    setQuantity(quantity + 1);
+  };
+  const decreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  const undo = () => {
+    const cartItem = getCartItem();
+    if (!cartItem) return;
+    if (cartItem.quantity > recentlyAdded) {
+      const newCart = changeItemQuantity(-recentlyAdded);
+      saveCart(newCart);
+      return;
+    }
+    const newCart = cart.filter(
+      (cartItem) => product._id !== cartItem.product._id,
+    );
+    saveCart(newCart);
   };
 
   useEffect(() => {
@@ -60,13 +111,11 @@ export default function Product({ product }: { product: Product }) {
         <meta name="viewport" content="initial-scale=1, width=device-width" />
         <title>Product {product.name}</title>
       </Head>
-      <Button
-        onClick={() => router.back()}
-        variant={"contained"}
-        sx={{ margin: 2 }}
-      >
-        Back to products
-      </Button>
+      <Link href={"/products"}>
+        <Button variant={"contained"} sx={{ margin: 2 }}>
+          Back to products
+        </Button>
+      </Link>
       <Container
         sx={{
           width: { xs: "100%", sm: "90%", lg: "80%", xl: "70%" },
@@ -153,11 +202,42 @@ export default function Product({ product }: { product: Product }) {
           </Typography>
           <Typography variant={"body2"}>{product.description}</Typography>
           <Typography variant={"body1"}>${product.price}</Typography>
-          <Button variant="contained" onClick={handleAddToCart}>
-            Add to cart
-          </Button>
+          <Box width={"100%"} display={"flex"} justifyContent={"center"}>
+            <Box
+              display={"flex"}
+              flexDirection={"column"}
+              gap={1}
+              width={"100%"}
+            >
+              <Button variant="contained" onClick={handleAddToCart}>
+                Add {quantity} to cart
+              </Button>
+              <Box display={"flex"} gap={1} alignItems={"center"}>
+                <Button
+                  fullWidth
+                  variant={"contained"}
+                  onClick={decreaseQuantity}
+                >
+                  -
+                </Button>
+                <Button
+                  fullWidth
+                  variant={"contained"}
+                  onClick={increaseQuantity}
+                >
+                  +
+                </Button>
+              </Box>
+            </Box>
+          </Box>
         </Box>
       </Container>
+      <SimpleSnackBar
+        open={showingSnackBar}
+        close={closeSnackBar}
+        message={`Added ${quantity} ${transformProductName(product.name, quantity)} to Cart`}
+        undo={undo}
+      />
     </>
   );
 }

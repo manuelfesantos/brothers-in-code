@@ -1,12 +1,7 @@
-import { Product } from "@/mocks/products";
 import { Box, Button, Typography } from "@mui/material";
-import { cartContext, CartContext, CartItemType } from "@/context/cart-context";
-import { useContext } from "react";
-import {
-  getLargeImage,
-  getMediumImage,
-  getSmallImage,
-} from "@/utils/r2/r2-endpoints";
+import { CartItemType } from "@/context/cart-context";
+import { getMediumImage } from "@/utils/r2/r2-endpoints";
+import Link from "next/link";
 
 interface Props {
   item: CartItemType;
@@ -22,18 +17,22 @@ export default function CartItem({ item, addToCart, removeFromCart }: Props) {
         mr={"auto"}
         gap={2}
         sx={{
-          display: { xs: "flex", md: "grid" },
-          gridTemplateColumns: { md: "1fr 4fr 2fr 1fr" },
-          justifyContent: "space-between",
-          width: { xs: "90%", md: "50%" },
+          display: "grid",
+          gridTemplateColumns: "1fr 4fr 2fr 1fr",
+          alignItems: "center",
+          width: { xs: "95vw", sm: "60vw", md: "50vw" },
+          ml: { xs: "auto", sm: "auto", md: "auto" },
         }}
       >
-        <img
-          src={`${getMediumImage(item.product.image, 1)}`}
-          alt={item.product.name}
-          width={100}
-          style={{ borderRadius: "5px" }}
-        />
+        <Link href={`/products/${item.product._id}`}>
+          <img
+            src={`${getMediumImage(item.product.image, 1)}`}
+            alt={item.product.name}
+            width={100}
+            style={{ borderRadius: "5px" }}
+          />
+        </Link>
+
         <Box
           height={"100%"}
           display={"flex"}
