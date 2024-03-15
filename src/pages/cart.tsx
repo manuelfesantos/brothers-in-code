@@ -1,10 +1,11 @@
 import Head from "next/head";
-import { CartContext, cartContext, CartItemType } from "@/context/cart-context";
+import { CartContext, cartContext } from "@/context/cart-context";
 import { useContext, useEffect, useState } from "react";
 import CartItem from "@/components/CartItem/CartItem";
-import { Box, Button, Container, Typography } from "@mui/material";
+import { Box, Button, Container, Divider, Typography } from "@mui/material";
 import Link from "next/link";
 import SimpleSnackBar from "@/components/SimpleSnackBar/SimpleSnackBar";
+import { CartItemType } from "@/types/cart";
 
 export default function Cart() {
   const { cart, setCart } = useContext(cartContext) as CartContext;
@@ -48,7 +49,7 @@ export default function Cart() {
           quantity: cartItem.quantity + quantity,
         };
       }
-      return item;
+      return cartItem;
     });
   };
 
@@ -101,12 +102,20 @@ export default function Cart() {
             </Typography>
             <Box display={"flex"} flexDirection={"column"} gap={2}>
               {[...new Set(cart)].map((item) => (
-                <CartItem
-                  key={item.product._id + Math.random()}
-                  item={item}
-                  addToCart={handleAddToCart}
-                  removeFromCart={handleRemoveFromCart}
-                />
+                <>
+                  <CartItem
+                    key={item.product._id + Math.random()}
+                    item={item}
+                    addToCart={handleAddToCart}
+                    removeFromCart={handleRemoveFromCart}
+                  />
+                  {cart.indexOf(item) < cart.length - 1 && (
+                    <Divider
+                      key={item.product._id}
+                      variant={"fullWidth"}
+                    ></Divider>
+                  )}
+                </>
               ))}
             </Box>
             <Typography variant={"h5"} mt={4} mb={2}>

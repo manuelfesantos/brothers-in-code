@@ -1,19 +1,20 @@
-import { useRouter } from "next/router";
 import Head from "next/head";
 import { GetServerSideProps, GetServerSidePropsContext } from "next";
-import { Product, productsMock } from "@/mocks/products";
+import { productsMock } from "@/mocks/products";
 import { Box, Button, Container, Typography } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
-import { CartContext, cartContext, CartItemType } from "@/context/cart-context";
+import { CartContext, cartContext } from "@/context/cart-context";
 import { getLargeImage } from "@/utils/r2/r2-endpoints";
 import Link from "next/link";
 import SimpleSnackBar from "@/components/SimpleSnackBar/SimpleSnackBar";
 import { transformProductName } from "@/utils/value-handling/text-handling";
+import Image from "next/image";
+import { CartItemType } from "@/types/cart";
+import { Product } from "@/types/product";
 
 export default function Product({ product }: { product: Product }) {
-  const router = useRouter();
   const [currentImage, setCurrentImage] = useState<number>(1);
   const { cart, setCart } = useContext(cartContext) as CartContext;
   const [showingSnackBar, setShowingSnackbar] = useState<boolean>(false);
@@ -36,7 +37,7 @@ export default function Product({ product }: { product: Product }) {
 
   const handleAddToCart = () => {
     openSnackBar();
-    setRecentlyAdded(quantity);
+    setRecentlyAdded((prevState) => prevState + quantity);
     const cartItem = getCartItem();
     console.log("Showing Snack Bar: ", showingSnackBar);
     if (cartItem) {
@@ -70,11 +71,12 @@ export default function Product({ product }: { product: Product }) {
   };
 
   const openSnackBar = () => {
-    setShowingSnackbar((prevState) => true);
+    setShowingSnackbar(true);
   };
 
   const closeSnackBar = () => {
     setShowingSnackbar(false);
+    setRecentlyAdded(0);
   };
 
   const increaseQuantity = () => {
@@ -117,8 +119,10 @@ export default function Product({ product }: { product: Product }) {
         </Button>
       </Link>
       <Container
+        maxWidth={"lg"}
         sx={{
           width: { xs: "100%", sm: "90%", lg: "80%", xl: "70%" },
+          maxWidth: { xs: "100vw", sm: "90vw", lg: "80vw", xl: "70vw" },
           my: 4,
           display: { xs: "block", md: "flex" },
           justifyContent: "space-evenly",
@@ -127,64 +131,89 @@ export default function Product({ product }: { product: Product }) {
       >
         <Box
           sx={{
-            display: { xs: "flex", md: "flex" },
+            display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: { xs: "100%", md: "45%" },
-            borderRadius: { xs: 0, md: 3 },
+            width: {
+              xs: "100%",
+              md: "45%",
+            },
+            borderRadius: { xs: 0, sm: 2, md: 3 },
             overflow: "hidden",
             position: "relative",
           }}
         >
-          <img
-            srcSet={`${getLargeImage(product.image, currentImage)}?w=248&h=164&fit=crop&auto=format&dpr=2 2x`}
-            src={`${getLargeImage(product.image, currentImage)}?w=248&h=164&fit=crop&auto=format`}
-            alt={product.name}
-            loading={"lazy"}
-            style={{
-              height: "auto",
-              width: "100%",
-            }}
-          />
           <Box
+            display={"flex"}
+            alignItems={"center"}
+            justifyContent={"center"}
             sx={{
-              cursor: "pointer",
-              position: "absolute",
-              left: 0,
-              backgroundColor: "white",
-              p: 1,
-              borderRadius: "0 10px 10px 0",
+              width: {
+                xs: "100%",
+                sm: "70vw",
+                md: "45vw",
+              },
+              height: {
+                xs: "100vw",
+                sm: "70vw",
+                md: "45vw",
+                lg: "40vw",
+                xl: "30vw",
+              },
+              position: "relative",
+              mb: { xs: 1, sm: 1, md: 0 },
+              borderRadius: { xs: 0, sm: 3, md: 3 },
             }}
-            onClick={handlePrevious}
           >
-            <ArrowBackIosNewIcon
-              sx={{
-                position: "relative",
-                right: 0,
-                ":hover": { color: "gray" },
-                ":active": { right: 2 },
-              }}
+            <Image
+              src={`${getLargeImage(product.image, currentImage)}`}
+              alt={product.name}
+              fill
+              placeholder={"blur"}
+              blurDataURL={"/placeholder.jpeg"}
+              priority
+              objectFit={"cover"}
             />
-          </Box>
-          <Box
-            sx={{
-              cursor: "pointer",
-              position: "absolute",
-              right: 0,
-              backgroundColor: "white",
-              p: 1,
-              borderRadius: "10px 0 0 10px",
-            }}
-            onClick={handleNext}
-          >
-            <ArrowForwardIosIcon
+            <Box
               sx={{
-                position: "relative",
+                cursor: "pointer",
+                position: "absolute",
                 left: 0,
-                ":hover": { color: "gray" },
-                ":active": { left: 2 },
+                backgroundColor: "white",
+                p: 1,
+                borderRadius: "0 10px 10px 0",
               }}
-            />
+              onClick={handlePrevious}
+            >
+              <ArrowBackIosNewIcon
+                sx={{
+                  position: "relative",
+                  right: 0,
+                  ":hover": { color: "gray" },
+                  ":active": { right: 2 },
+                }}
+              />
+            </Box>
+            <Box
+              sx={{
+                cursor: "pointer",
+                position: "absolute",
+                right: 0,
+                backgroundColor: "white",
+                p: 1,
+                borderRadius: "10px 0 0 10px",
+              }}
+              onClick={handleNext}
+            >
+              <ArrowForwardIosIcon
+                sx={{
+                  position: "relative",
+                  left: 0,
+                  ":hover": { color: "gray" },
+                  ":active": { left: 2 },
+                }}
+              />
+            </Box>
           </Box>
         </Box>
         <Box
@@ -195,8 +224,12 @@ export default function Product({ product }: { product: Product }) {
         >
           <Typography
             variant={"h3"}
-            fontWeight={600}
-            sx={{ mb: 2, textAlign: "center" }}
+            fontWeight={{ xs: 400, sm: 500, md: 600 }}
+            sx={{
+              mb: 2,
+              textAlign: "center",
+              fontSize: { xs: "2.5rem", md: "3rem" },
+            }}
           >
             {product.name}
           </Typography>
@@ -235,7 +268,7 @@ export default function Product({ product }: { product: Product }) {
       <SimpleSnackBar
         open={showingSnackBar}
         close={closeSnackBar}
-        message={`Added ${quantity} ${transformProductName(product.name, quantity)} to Cart`}
+        message={`Added ${recentlyAdded} ${transformProductName(product.name, quantity)} to Cart`}
         undo={undo}
       />
     </>

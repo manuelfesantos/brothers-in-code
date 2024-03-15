@@ -3,6 +3,7 @@ import Head from "next/head";
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import WelcomeMessage from "@/components/Home/Welcome Message";
 
 export default function Home() {
   const router = useRouter();
@@ -23,13 +24,7 @@ export default function Home() {
             alignItems: "center",
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{ mb: 2, textAlign: "center" }}
-          >
-            Welcome to the Next Online Shop!
-          </Typography>
+          <WelcomeMessage />
           <Link href="/products" color="secondary">
             Go to the products page
           </Link>

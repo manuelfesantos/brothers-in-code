@@ -1,5 +1,6 @@
 import { Button, IconButton, Slide, Snackbar } from "@mui/material";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
+import { useEffect, useState } from "react";
 interface Props {
   open: boolean;
   close: () => void;
@@ -7,6 +8,13 @@ interface Props {
   undo?: () => void;
 }
 export default function SimpleSnackBar({ open, close, message, undo }: Props) {
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      close();
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [close]);
+
   return (
     <Snackbar
       sx={{ mt: 10 }}
@@ -33,7 +41,6 @@ export default function SimpleSnackBar({ open, close, message, undo }: Props) {
         </>
       }
       message={message}
-      onClose={close}
     />
   );
 }

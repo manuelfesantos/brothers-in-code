@@ -1,25 +1,19 @@
-import Link from "next/link";
-import AdbIcon from "@mui/icons-material/Adb";
 import MenuIcon from "@mui/icons-material/Menu";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import {
   AppBar,
-  Avatar,
-  Badge,
   Box,
-  Button,
   Container,
   IconButton,
-  Menu,
-  MenuItem,
   Slide,
   Toolbar,
-  Tooltip,
   Typography,
   useScrollTrigger,
 } from "@mui/material";
-import { useState, MouseEvent, useEffect, useContext } from "react";
-import { CartContext, cartContext } from "@/context/cart-context";
+import { useState } from "react";
+import UserDrawer from "@/components/Header/UserDrawer";
+import NavDrawer from "@/components/Header/NavDrawer";
+import UserIcon from "@/components/Header/UserIcon";
+import CartIcon from "@/components/Header/CartIcon";
 
 const HideOnScroll = ({ children }: any) => {
   const trigger = useScrollTrigger();
@@ -31,12 +25,10 @@ const HideOnScroll = ({ children }: any) => {
 };
 
 export default function Header() {
-  const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
-  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
-  const { cart, setCart } = useContext(cartContext) as CartContext;
+  const [showingNavDrawer, setShowingNavDrawer] = useState<boolean>(false);
+  const [showingUserDrawer, setShowingUserDrawer] = useState<boolean>(false);
 
   const pages = [
-    ["Home", "/"],
     ["Products", "/products"],
     ["About", "/about"],
   ];
@@ -44,90 +36,54 @@ export default function Header() {
   const settings = [
     ["Profile", "/profile"],
     ["Settings", "/settings"],
-    ["Logout", "/login"],
+    ["Logout", "/"],
   ];
 
   const websiteName = "B.i.C.";
 
-  const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {
-    setAnchorElNav(event.currentTarget);
+  const handleOpenNavMenu = () => {
+    setShowingNavDrawer(true);
   };
-  const handleOpenUserMenu = (event: MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget);
+  const handleOpenUserMenu = () => {
+    setShowingUserDrawer(true);
   };
 
   const handleCloseNavMenu = () => {
-    setAnchorElNav(null);
+    setShowingNavDrawer(false);
   };
 
   const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
+    setShowingUserDrawer(false);
   };
-
-  useEffect(() => {
-    const storageCart = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCart(storageCart);
-  }, [setCart]);
 
   return (
     <>
       <HideOnScroll>
-        <AppBar color={"primary"}>
+        <AppBar
+          color={"primary"}
+          sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        >
           <Container maxWidth={"xl"}>
             <Toolbar disableGutters>
-              <AdbIcon sx={{ display: { xs: "none", md: "flex" }, mr: 1 }} />
-              <Typography
-                variant="h6"
-                noWrap
-                component="a"
-                href="/"
-                sx={{
-                  mr: 2,
-                  display: { xs: "none", md: "flex" },
-                  fontFamily: "monospace",
-                  fontWeight: 700,
-                  letterSpacing: ".3rem",
-                  color: "inherit",
-                  textDecoration: "none",
-                }}
-              >
-                {websiteName}
-              </Typography>
               <Box
-                sx={{ flexGrow: 0, display: { xs: "flex", md: "none" } }}
+                sx={{ flexGrow: 0, display: "flex" }}
+                mr={1}
                 display={"flex"}
                 justifyContent={"space-evenly"}
                 alignItems={"center"}
-                height={100}
+                height={70}
               >
                 <IconButton
-                  size={"large"}
+                  size={"small"}
                   aria-label={"home"}
-                  onClick={handleOpenNavMenu}
+                  onClick={
+                    showingNavDrawer ? handleCloseNavMenu : handleOpenNavMenu
+                  }
                   color={"inherit"}
                 >
                   <MenuIcon />
                 </IconButton>
-                <Menu
-                  id={"menu-appbar"}
-                  anchorEl={anchorElNav}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                  keepMounted
-                  transformOrigin={{ vertical: "top", horizontal: "left" }}
-                  open={Boolean(anchorElNav)}
-                  onClose={handleCloseNavMenu}
-                  sx={{
-                    display: { xs: "block", md: "none" },
-                  }}
-                >
-                  {pages.map((page, index) => (
-                    <MenuItem key={index} onClick={handleCloseNavMenu}>
-                      <Link href={page[1]}>{page[0]}</Link>
-                    </MenuItem>
-                  ))}
-                </Menu>
               </Box>
-              <AdbIcon sx={{ display: { xs: "flex", md: "none" }, mr: 1 }} />
               <Typography
                 variant="h5"
                 noWrap
@@ -135,7 +91,7 @@ export default function Header() {
                 href="/"
                 sx={{
                   mr: 2,
-                  display: { xs: "flex", md: "none" },
+                  display: "flex",
                   flexGrow: 1,
                   fontFamily: "monospace",
                   fontWeight: 700,
@@ -146,73 +102,29 @@ export default function Header() {
               >
                 {websiteName}
               </Typography>
-              <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
-                {pages.map((page, index) => (
-                  <Link key={page[0]} href={page[1]}>
-                    <Button
-                      key={index}
-                      onClick={handleCloseNavMenu}
-                      sx={{ my: 2, color: "white", display: "block" }}
-                    >
-                      {page[0]}
-                    </Button>
-                  </Link>
-                ))}
-              </Box>
-              <Box sx={{ flexGrow: 0 }}>
-                <Link href={"/cart"} style={{ marginRight: 10 }}>
-                  <IconButton
-                    color={"inherit"}
-                    size={"large"}
-                    sx={{ position: "relative" }}
-                  >
-                    <Badge
-                      badgeContent={cart.reduce(
-                        (count, item) => count + item.quantity,
-                        0,
-                      )}
-                      color="error"
-                    >
-                      <ShoppingCartIcon />
-                    </Badge>
-                  </IconButton>
-                </Link>
-                <Tooltip title={"Open settings"}>
-                  <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                    <Avatar
-                      alt="Remy Sharp"
-                      src="/static/images/avatar/2.jpg"
-                    />
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  sx={{ mt: "45px" }}
-                  id="menu-appbar"
-                  anchorEl={anchorElUser}
-                  anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  open={Boolean(anchorElUser)}
-                  onClose={handleCloseUserMenu}
-                >
-                  {settings.map((setting, index) => (
-                    <MenuItem key={index} onClick={handleCloseUserMenu}>
-                      <Link href={setting[1]}>{setting[0]}</Link>
-                    </MenuItem>
-                  ))}
-                </Menu>
+              <Box display={"flex"} alignItems={"center"} sx={{ flexGrow: 0 }}>
+                <CartIcon />
+                <UserIcon
+                  showingUserDrawer={showingUserDrawer}
+                  handleCloseUserMenu={handleCloseUserMenu}
+                  handleOpenUserMenu={handleOpenUserMenu}
+                />
               </Box>
             </Toolbar>
           </Container>
         </AppBar>
       </HideOnScroll>
-      <Box height={100}></Box>
+      <Box height={70}></Box>
+      <NavDrawer
+        handleCloseNavMenu={handleCloseNavMenu}
+        showingNavDrawer={showingNavDrawer}
+        pages={pages}
+      />
+      <UserDrawer
+        settings={settings}
+        showingUserDrawer={showingUserDrawer}
+        handleCloseUserMenu={handleCloseUserMenu}
+      />
     </>
   );
 }
