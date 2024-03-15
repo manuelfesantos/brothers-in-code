@@ -5,17 +5,13 @@ import {
   SetStateAction,
   useState,
 } from "react";
-import { Product } from "@/mocks/products";
+import { CartItemType } from "@/types/cart";
 
 export interface CartContext {
   cart: CartItemType[];
   setCart: Dispatch<SetStateAction<CartItemType[]>>;
 }
 
-export interface CartItemType {
-  product: Product;
-  quantity: number;
-}
 export const cartContext = createContext<CartContext | null>(null);
 
 export default function CartContextProvider({

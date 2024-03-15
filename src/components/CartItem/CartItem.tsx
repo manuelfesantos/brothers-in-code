@@ -1,7 +1,8 @@
 import { Box, Button, Typography } from "@mui/material";
-import { CartItemType } from "@/context/cart-context";
 import { getMediumImage } from "@/utils/r2/r2-endpoints";
 import Link from "next/link";
+import Image from "next/image";
+import { CartItemType } from "@/types/cart";
 
 interface Props {
   item: CartItemType;
@@ -20,16 +21,27 @@ export default function CartItem({ item, addToCart, removeFromCart }: Props) {
           display: "grid",
           gridTemplateColumns: "1fr 4fr 2fr 1fr",
           alignItems: "center",
-          width: { xs: "95vw", sm: "60vw", md: "50vw" },
+          width: { xs: "95vw", sm: "60vw", md: "50vw", lg: "40vw", xl: "30vw" },
           ml: { xs: "auto", sm: "auto", md: "auto" },
         }}
       >
-        <Link href={`/products/${item.product._id}`}>
-          <img
+        <Link
+          href={`/products/${item.product._id}`}
+          style={{
+            width: 100,
+            height: 100,
+            borderRadius: "5px",
+            position: "relative",
+          }}
+        >
+          <Image
             src={`${getMediumImage(item.product.image, 1)}`}
             alt={item.product.name}
-            width={100}
-            style={{ borderRadius: "5px" }}
+            fill
+            style={{
+              objectFit: "cover",
+              borderRadius: "5px",
+            }}
           />
         </Link>
 
