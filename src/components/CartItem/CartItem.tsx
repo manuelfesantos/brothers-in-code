@@ -19,7 +19,7 @@ export default function CartItem({ item, addToCart, removeFromCart }: Props) {
         gap={2}
         sx={{
           display: "grid",
-          gridTemplateColumns: "1fr 4fr 2fr 1fr",
+          gridTemplateColumns: "1fr 4fr 3fr 1fr",
           alignItems: "center",
           width: { xs: "95vw", sm: "60vw", md: "50vw", lg: "40vw", xl: "30vw" },
           ml: { xs: "auto", sm: "auto", md: "auto" },
@@ -50,20 +50,23 @@ export default function CartItem({ item, addToCart, removeFromCart }: Props) {
           display={"flex"}
           flexDirection={"column"}
           justifyContent={"center"}
+          overflow={"scroll"}
+          sx={{ scrollbarWidth: "none", scrollSnapType: "both mandatory" }}
         >
           <Typography
             sx={{
               fontSize: { xs: "1rem", md: "1.5rem" },
+              flexGrow: 0,
             }}
             variant={item.product.name.length > 10 ? "body1" : "h5"}
           >
             {item.product.name}
           </Typography>
-          <Box display={"flex"} alignItems={"center"} gap={1}>
+          <Box display={"flex"} gap={1} alignItems={"center"}>
             <Typography variant={"body1"} fontWeight={100}>
               ${item.product.price}
             </Typography>
-            <Typography variant={"body1"} fontWeight={300}>
+            <Typography sx={{ flexGrow: 0 }} variant={"body1"} fontWeight={300}>
               x{item.quantity}
             </Typography>
           </Box>
@@ -73,6 +76,8 @@ export default function CartItem({ item, addToCart, removeFromCart }: Props) {
           display={"flex"}
           flexDirection={"column"}
           justifyContent={"center"}
+          overflow={"scroll"}
+          sx={{ scrollbarWidth: "none" }}
         >
           <p>Total:</p>
           <p>${(item.product.price * item.quantity).toFixed(2)}</p>

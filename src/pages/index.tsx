@@ -4,8 +4,16 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import WelcomeMessage from "@/components/Home/Welcome Message";
+import AccountActionButton from "@/components/Home/AccountActionButton";
+import ProductCarousel from "@/components/Home/ProductCarousel";
+import { productsMock } from "@/mocks/products";
+import { GetServerSideProps } from "next";
+import { Product } from "@/types/product";
 
-export default function Home() {
+interface Props {
+  products: Product[];
+}
+export default function Home({ products }: Props) {
   const router = useRouter();
 
   return (
@@ -28,15 +36,24 @@ export default function Home() {
           <Link href="/products" color="secondary">
             Go to the products page
           </Link>
-          <Button
-            onClick={() => router.push("/login")}
-            variant="contained"
-            sx={{ mt: 2 }}
-          >
-            Login
-          </Button>
+          <AccountActionButton />
+          <ProductCarousel products={products} />
         </Box>
       </Container>
     </>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {
+      products: [
+        productsMock[0],
+        productsMock[1],
+        productsMock[2],
+        productsMock[3],
+        productsMock[4],
+      ],
+    },
+  };
+};
