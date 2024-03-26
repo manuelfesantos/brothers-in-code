@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 import mongoose, { Document, Schema } from 'mongoose';
 
 
@@ -8,6 +8,8 @@ export interface IUser extends Document {
     username: string;
     email: string;
     password: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const userSchema: Schema = new Schema<IUser>({
@@ -26,11 +28,45 @@ const userSchema: Schema = new Schema<IUser>({
         type: String,
         required: true,
         unique: true,
+        lowercase: true,
+        validate: {
+            /**
+             * Validates an email address.
+             *
+             * @param {string} email - The email address to be validated.
+             * @return {boolean} Returns true if the email address is valid, false otherwise.
+             */
+            validator: (email: string) => {
+                return (/^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/).test(email)
+            },
+            message: 'Please enter a valid email address',
+        }
     },
     password: {
         type: String,
         required: true,
+        validate: {
+            /**
+             * Validates the given password against a specific pattern.
+             *
+             * @param {string} password - the password to be validated
+             * @return {boolean} true if the password matches the pattern, false otherwise
+             */
+            validator: (password: string) => {
+                return (/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/).test(password)
+            },
+            message: 'The password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character',
+        }
     },
+    createdAt: {
+        type: Date,
+        default: new Date(),
+        immutable: true
+    },
+    updatedAt: {
+        type: Date,
+        default: new Date(),
+    }
 });
 
 
@@ -40,14 +76,15 @@ const userSchema: Schema = new Schema<IUser>({
  * @this {IUser} - the user document
  * @param {Function} next - the callback function to call after hashing the password
  */
-userSchema.pre<Document>('save', function (this: IUser, next: Function) {
+userSchema.pre('save', function (this: IUser, next: Function) {
     if (this.isModified('password')) {
-        bcrypt.hash(this.password, Number(process.env.SALT_ROUNDS), (err: Error, hash: string) => {
+        bcrypt.hash(this.password, Number(process.env.SALT_ROUNDS), (err: Error | undefined, hash: string) => {
             if (err) return next(err);
             this.password = hash;
-            next();
         })
     }
+    this.updatedAt = new Date();
+    next();
 })
 
 /**
@@ -56,7 +93,7 @@ userSchema.pre<Document>('save', function (this: IUser, next: Function) {
  * @param {string} password - the password to compare
  * @return {Promise<boolean>} a promise that resolves to a boolean indicating whether the passwords match
  */
-userSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function (this: IUser, password: string): Promise<boolean> {
     if (!password) {
         throw new Error('Não existe password');
     }
@@ -67,17 +104,6 @@ userSchema.methods.comparePassword = async function (password: string): Promise<
         console.log('Erro a comparar passwords: ', error.message);
         return false
     }
-};
-
-
-/**
- * Verifies if the email is valid.
- *
- * @return {boolean} whether the email is valid
- */
-userSchema.statics.isValidEmail = function (email: string): boolean {
-    const regex: RegExp = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return regex.test(email);
 };
 
 
@@ -122,14 +148,11 @@ userSchema.statics.usernameExists = async function (username: string): Promise<b
  * @param {string} lastName - the new last name (if null or empty string is provided, it will not be changed)
  * @return {Promise<IUser>} a promise that resolves to the updated user document
  */
-userSchema.methods.changeName = function (firstName: string, lastName: string): Promise<IUser> {
+userSchema.methods.changeName = async function (this: IUser, firstName: string, lastName: string): Promise<IUser> {
     if (!firstName && !lastName) throw new Error('Nothing to change');
-
-    const updateData: any = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-
-    return this.model('User').findByIdAndUpdate(this._id, updateData, { new: true });
+    const user = await this.model('User').findByIdAndUpdate(this._id, { firstName: firstName, lastName: lastName }, { new: true, runValidators: true, returnDocument: 'after' }) as IUser;
+    if (!user) throw new Error('User not found');
+    return user
 };
 
 
@@ -139,13 +162,11 @@ userSchema.methods.changeName = function (firstName: string, lastName: string): 
  * @param {string} newPassword - the new password
  * @return {Promise<IUser>} a promise that resolves to the updated user document
  */
-userSchema.methods.changePassword = function (newPassword: string): Promise<IUser> {
-    if (!this.verifyPassword(newPassword)) {
-        throw new Error('The password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character');
-    }
-    return this.model('User').findByIdAndUpdate(this._id, { password: newPassword }, { new: true });
+userSchema.methods.changePassword = async function (this: IUser, newPassword: string): Promise<IUser> {
+    const user = await this.model('User').findByIdAndUpdate(this._id, { password: newPassword }, { new: true, runValidators: true, returnDocument: 'after' }) as IUser;
+    if (!user) throw new Error('User not found');
+    return user;
 };
-
 
 
 /**
@@ -158,17 +179,9 @@ userSchema.methods.changePassword = function (newPassword: string): Promise<IUse
  * @param {string} [lastName] - the last name of the new user (optional)
  * @return {Promise<IUser>} a promise that resolves to the new user document
  */
-userSchema.statics.createUser = async function (userInfo: IUser): Promise<IUser> {
+userSchema.statics.createUser = async function (userInfo: IUser): Promise<IUser | null> {
     try {
         const { username, email, password, firstName, lastName } = userInfo;
-        if (!this.isValidEmail(email)) throw new Error('Invalid email');
-        const userExists = await this.usernameExists(username) || await this.emailExists(email);
-        if (userExists) throw new Error('Username and/or email already exists');
-
-        if (!this.verifyPassword(password)) {
-            throw new Error('The password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character');
-        }
-
         const newUser = new this({
             username,
             email,
@@ -179,18 +192,9 @@ userSchema.statics.createUser = async function (userInfo: IUser): Promise<IUser>
         return newUser.save();
     } catch (error: any) {
         console.error('Error in createUser:', error);
+        return null
     }
 };
-
-/**
- * Verify the password of the user.
- * 
- * @param {string} password - the password of the user
- * @return {Promise<boolean>} a promise that resolves to a boolean indicating whether the password is strong enough
- */
-userSchema.statics.verifyPassword = async function (password: string): Promise<boolean> {
-    return (/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/).test(password)
-}
 
 
 
@@ -222,5 +226,4 @@ userSchema.statics.matchEmailAndPassword = async function (email: string, passwo
 };
 
 
-
-export default mongoose.model<IUser>('User', userSchema);
+export default mongoose.model<IUser & Document>('User', userSchema);
